@@ -14,6 +14,13 @@ public protocol Pipelinable: class {
     var output: Result<T, NSError>? { get set }
 }
 
+private enum OperationState {
+    case Ready
+    case Executing
+    case Finished
+    case Cancelled
+}
+
 public class PipelineOperation<T>: NSOperation, Pipelinable {
     public typealias Fulfill = T -> Void
     public typealias Reject = NSError -> Void
@@ -27,6 +34,70 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
         return q
     }()
 
+    // MARK: State Management
+
+    class func keyPathsForValuesAffectingIsReady() -> Set<NSObject> {
+        return ["state"]
+    }
+
+    class func keyPathsForValuesAffectingIsExecuting() -> Set<NSObject> {
+        return ["state"]
+    }
+
+    class func keyPathsForValuesAffectingIsFinished() -> Set<NSObject> {
+        return ["state"]
+    }
+
+    class func keyPathsForValuesAffectingIsCancelled() -> Set<NSObject> {
+        return ["state"]
+    }
+
+    private var _state = OperationState.Ready
+    private var state: OperationState {
+        get {
+            return _state
+        }
+
+        set(newState) {
+            willChangeValueForKey("state")
+
+            switch (_state, newState) {
+                case (.Cancelled, _):
+                    break // cannot leave the cancelled state
+                case (.Finished, _):
+                    break // cannot leave the finished state
+                default:
+                    assert(_state != newState, "Performing invalid cyclic state transition.")
+                    _state = newState
+            }
+
+            didChangeValueForKey("state")
+        }
+    }
+
+    public override var ready: Bool {
+        switch state {
+            case .Ready:
+                return super.ready
+            default:
+                return false
+        }
+    }
+
+    public override var executing: Bool {
+        return state == .Executing
+    }
+
+    public override var finished: Bool {
+        return state == .Finished
+    }
+
+    public override var cancelled: Bool {
+        return state == .Cancelled
+    }
+
+    // MARK: Initializers
+
     public init(task: (Fulfill, Reject) -> Void) {
         self.task = task
         super.init()
@@ -37,19 +108,29 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
         super.init()
     }
 
-    public override func main() {
+    // MARK: Execution
+
+    public override final func start() {
+        state = .Executing
+        main()
+    }
+
+    public override final func main() {
         internalQueue.suspended = false
         if let task = self.task {
             task({ output in
                 self.output = .Success(output)
-                }, { error in
-                    self.output = .Failure(error)
+                self.state = .Finished
+            }, { error in
+                self.output = .Failure(error)
+                self.state = .Finished
             })
         }
     }
 
-    public override func cancel() {
+    public override final func cancel() {
         internalQueue.cancelAllOperations()
+        state = .Cancelled
         super.cancel()
     }
 

@@ -35,7 +35,6 @@ A NSOperation subclass that conforms to the Pipelinable protocol, which simply m
 
 ## To Do
 
-- [ ] Handle asyncronous tasks correctly
 - [ ] Add cancellation ability
 - [ ] Clarify queue priority and QOS in pipeline API
 - [ ] Allow providing a NSOperationQueue when initializing a PipelineQueue

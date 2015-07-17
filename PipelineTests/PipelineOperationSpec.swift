@@ -7,9 +7,11 @@ let background = { then in
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), then)
 }
 
-let onMainAfter: (Int64, () -> ()) -> () = { seconds, then in
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, seconds * Int64(NSEC_PER_SEC)), dispatch_get_main_queue(), then)
+let onMainAfter: (Double, () -> ()) -> () = { seconds, then in
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(seconds) * Int64(NSEC_PER_SEC)), dispatch_get_main_queue(), then)
 }
+
+let placeholderError = NSError(domain: "ca.brandonevans.Pipeline", code: 123, userInfo: nil)
 
 class PipelineOperationSpec: QuickSpec {
     override func spec() {
@@ -22,14 +24,35 @@ class PipelineOperationSpec: QuickSpec {
                     }
                     operation.start()
                 }
+
+                it("should finish immediately") {
+                    expect(operation.finished).to(beTrue())
+                }
                 
                 it("should fulfill with value") {
                     expect(operation.output?.value).toEventually(equal(99))
                 }
             }
-            context("rejected") {
 
+            context("rejected") {
+                var operation: PipelineOperation<Int>!
+                beforeEach {
+                    operation = PipelineOperation { fulfill, reject in
+                        reject(placeholderError)
+                    }
+                    operation.start()
+                }
+
+                it("should finish immediately") {
+                    expect(operation.finished).to(beTrue())
+                }
+                
+                it("should reject with error") {
+                    expect(operation.output?.error).toEventually(equal(placeholderError))
+                }
             }
+
+            context("cancelled") {}
         }
 
         context("asyncronous task") {
@@ -38,18 +61,54 @@ class PipelineOperationSpec: QuickSpec {
                 beforeEach {
                     operation = PipelineOperation { fulfill, reject in
                         background {
-                            onMainAfter(3) {
+                            onMainAfter(0.5) {
                                 fulfill(99)
                             }
                         }
                     }
                     operation.start()
                 }
-                
+
+                it("shouldn't finish immediately") {
+                    expect(operation.finished).to(beFalse())
+                }
+
+                it("should eventually finish") {
+                    expect(operation.finished).toEventually(beTrue())
+                }
+
                 it("should fulfill with value") {
                     expect(operation.output?.value).toEventually(equal(99))
                 }
             }
+
+            context("rejected") {
+                var operation: PipelineOperation<Int>!
+                beforeEach {
+                    operation = PipelineOperation { fulfill, reject in
+                        background {
+                            onMainAfter(0.5) {
+                                reject(placeholderError)
+                            }
+                        }
+                    }
+                    operation.start()
+                }
+
+                it("shouldn't finish immediately") {
+                    expect(operation.finished).to(beFalse())
+                }
+
+                it("should eventually finish") {
+                    expect(operation.finished).toEventually(beTrue())
+                }
+                
+                it("should reject with error") {
+                    expect(operation.output?.error).toEventually(equal(placeholderError))
+                }
+            }
+
+            context("cancelled") {}
         }
     }
 }
