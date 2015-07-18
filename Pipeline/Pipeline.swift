@@ -9,31 +9,31 @@
 import Foundation
 
 public class PipelineQueue {
-    public enum Queue {
+    public enum QueueLevel {
         case Main
         case QOS(NSQualityOfService)
     }
 
-    private let q: NSOperationQueue
+    private let internalQueue: NSOperationQueue
 
-    public let queue: Queue
+    public let queueLevel: QueueLevel
     public var suspended = true {
         didSet {
-            q.suspended = suspended
+            internalQueue.suspended = suspended
         }
     }
     public var operations: [NSOperation] {
         return q.operations
     }
 
-    public init(_ queue: Queue = .QOS(.Default)) {
-        self.queue = queue
-        switch queue {
+    public init(_ queueLevel: QueueLevel = .QOS(.Default)) {
+        self.queueLevel = queueLevel
+        switch queueLevel {
         case .Main:
-            q = NSOperationQueue.mainQueue()
+            internalQueue = NSOperationQueue.mainQueue()
         case .QOS(let QOS):
-            q = NSOperationQueue()
-            q.qualityOfService = QOS
+            internalQueue = NSOperationQueue()
+            internalQueue.qualityOfService = QOS
         }
     }
 
@@ -41,65 +41,74 @@ public class PipelineQueue {
         q.cancelAllOperations()
     }
 
-    public func addOperation<O where O: NSOperation, O: Pipelinable>(op: O, _ queue: Queue? = nil) {
+    public func addOperation<O where O: NSOperation, O: Pipelinable>(op: O, _ queue: QueueLevel? = nil) {
         if let queue = queue {
             switch queue {
             case .Main:
                 PipelineQueue(.Main).addOperation(op)
             case .QOS(let QOS):
                 op.qualityOfService = QOS
-                q.addOperation(op)
+                internalQueue.addOperation(op)
             }
         }
         else {
-            q.addOperation(op)
+            internalQueue.addOperation(op)
         }
     }
 }
 
 public class Pipeline {
-    private let q: PipelineQueue
+    private let queue: PipelineQueue
 
     public init<U>(handler: () -> U) {
-        q = PipelineQueue(.QOS(.Default))
+        queue = PipelineQueue(.QOS(.Default))
         let operation = PipelineOperation<U> { fulfill, reject in
             fulfill(handler())
         }
-        q.addOperation(operation)
+        queue.addOperation(operation)
     }
 
-    public init<U>(_ QOS: NSQualityOfService = .Default, handler: () -> U) {
-        q = PipelineQueue(.QOS(QOS))
+    public convenience init<U>(_ QOS: NSQualityOfService = .Default, handler: () -> U) {
+        self.init(.QOS(QOS), handler: handler)
+    }
+
+    public init<U>(_ queueLevel: PipelineQueue.QueueLevel = .QOS(.Default), handler: () -> U) {
+        queue = PipelineQueue(queueLevel)
         let operation = PipelineOperation<U> { fulfill, reject in
             fulfill(handler())
         }
-        q.addOperation(operation)
+        queue.addOperation(operation)
     }
 
-    public init<U>(_ QOS: NSQualityOfService = .Default, operationHandler: () -> PipelineOperation<U>) {
-        q = PipelineQueue(.QOS(QOS))
+    public convenience init<U>(_ QOS: NSQualityOfService = .Default, operationHandler: () -> PipelineOperation<U>) {
+        self.init(.QOS(QOS), operationHandler: operationHandler)
+    }
+
+    public init<U>(_ queueLevel: PipelineQueue.QueueLevel = .QOS(.Default), operationHandler: () -> PipelineOperation<U>) {
+        queue = PipelineQueue(queueLevel)
         let operation = operationHandler()
-        q.addOperation(operation)
+        queue.addOperation(operation)
     }
 
     public func start() {
-        q.suspended = false
+        queue.suspended = false
     }
 
     // Values
     public func success<T, U>(successHandler handler: T -> U) -> Pipeline {
-        return self.success(q, q.queue, successHandler: handler)
+        return self.success(queue, queue.queueLevel, successHandler: handler)
     }
 
-    public func success<T, U>(QOS: PipelineQueue.Queue, successHandler handler: T -> U) -> Pipeline {
-        return self.success(q, QOS, successHandler: handler)
+    public func success<T, U>(QOS: PipelineQueue.QueueLevel, successHandler handler: T -> U) -> Pipeline {
+        return self.success(queue, QOS, successHandler: handler)
     }
 
+    // Shortcut for above when using .QOS level instead of .Main
     public func success<T, U>(QOS: NSQualityOfService, successHandler handler: T -> U) -> Pipeline {
-        return self.success(q, .QOS(QOS), successHandler: handler)
+        return self.success(queue, .QOS(QOS), successHandler: handler)
     }
 
-    public func success<T, U>(queue: PipelineQueue, _ QOS: PipelineQueue.Queue, successHandler handler: T -> U) -> Pipeline {
+    public func success<T, U>(queue: PipelineQueue, _ QOS: PipelineQueue.QueueLevel, successHandler handler: T -> U) -> Pipeline {
         if let lastOperation = queue.operations.last as? PipelineOperation<T> {
             let operation = PipelineOperation<U> { fulfill, reject in
                 if let output = lastOperation.output {
@@ -118,18 +127,18 @@ public class Pipeline {
 
     // Operations
     public func success<T, U>(successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
-        return self.success(q, q.queue, successHandler: handler)
+        return self.success(queue, queue.queueLevel, successHandler: handler)
     }
 
-    public func success<T, U>(QOS: PipelineQueue.Queue, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
-        return self.success(q, QOS, successHandler: handler)
+    public func success<T, U>(QOS: PipelineQueue.QueueLevel, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
+        return self.success(queue, QOS, successHandler: handler)
     }
 
     public func success<T, U>(QOS: NSQualityOfService, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
-        return self.success(q, .QOS(QOS), successHandler: handler)
+        return self.success(queue, .QOS(QOS), successHandler: handler)
     }
 
-    public func success<T, U>(queue: PipelineQueue, _ QOS: PipelineQueue.Queue, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
+    public func success<T, U>(queue: PipelineQueue, _ QOS: PipelineQueue.QueueLevel, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
         if let lastOperation = queue.operations.last as? PipelineOperation<T> {
             var operation: PipelineOperation<U>!
             operation = PipelineOperation<U> { fulfill, reject in
