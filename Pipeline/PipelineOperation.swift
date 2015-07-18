@@ -89,7 +89,7 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
     }
 
     public override var finished: Bool {
-        return state == .Finished
+        return state == .Finished || state == .Cancelled
     }
 
     public override var cancelled: Bool {

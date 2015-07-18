@@ -52,7 +52,50 @@ class PipelineOperationSpec: QuickSpec {
                 }
             }
 
-            context("cancelled") {}
+            context("cancelled") {
+                var operation: PipelineOperation<Int>!
+                beforeEach {
+                    operation = PipelineOperation { fulfill, reject in
+                        fulfill(99)
+                    }
+                }
+                context("before starting") {
+                    beforeEach {
+                        operation.cancel()
+                    }
+
+                    it("should be cancelled") {
+                        expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("should be finished") {
+                        expect(operation.finished).to(beTrue())
+                    }
+
+                    it("shouldn't have an output value") {
+                        expect(operation.output).to(beNil())
+                    }
+                }
+
+                context("after finishing") {
+                    beforeEach {
+                        operation.start()
+                        operation.cancel()
+                    }
+
+                    it("shouldn't be cancelled") {
+                        expect(operation.cancelled).to(beFalse())
+                    }
+
+                    it("should be finished") {
+                        expect(operation.finished).to(beTrue())
+                    }
+
+                    it("should have an output value") {
+                        expect(operation.output?.value).to(equal(99))
+                    }
+                }
+            }
         }
 
         context("asyncronous task") {
@@ -108,7 +151,55 @@ class PipelineOperationSpec: QuickSpec {
                 }
             }
 
-            context("cancelled") {}
+            context("cancelled") {
+                var operation: PipelineOperation<Int>!
+                beforeEach {
+                    operation = PipelineOperation { fulfill, reject in
+                        background {
+                            onMainAfter(0.5) {
+                                fulfill(99)
+                            }
+                        }
+                    }
+                }
+
+                context("before starting") {
+                    beforeEach {
+                        operation.cancel()
+                    }
+
+                    it("should be cancelled") {
+                        expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("should be finished") {
+                        expect(operation.finished).to(beTrue())
+                    }
+
+                    it("shouldn't have an output value") {
+                        expect(operation.output).to(beNil())
+                    }
+                }
+
+                context("after starting, before finishing") {
+                    beforeEach {
+                        operation.start()
+                        operation.cancel()
+                    }
+
+                    it("should be cancelled") {
+                        expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("should be finished") {
+                        expect(operation.finished).to(beTrue())
+                    }
+
+                    it("shouldn't have an output value") {
+                        expect(operation.output).to(beNil())
+                    }
+                }
+            }
         }
     }
 }
