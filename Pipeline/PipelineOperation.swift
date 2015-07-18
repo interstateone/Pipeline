@@ -118,13 +118,7 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
     public override final func main() {
         internalQueue.suspended = false
         if let task = self.task {
-            task({ output in
-                self.output = .Success(output)
-                self.state = .Finished
-            }, { error in
-                self.output = .Failure(error)
-                self.state = .Finished
-            })
+            task(fulfill, reject)
         }
     }
 
@@ -132,6 +126,16 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
         internalQueue.cancelAllOperations()
         state = .Cancelled
         super.cancel()
+    }
+
+    private func fulfill(output: T) {
+        self.output = .Success(output)
+        state = .Finished
+    }
+
+    private func reject(error: NSError) {
+        self.output = .Failure(error)
+        state = .Finished
     }
 
     // map
