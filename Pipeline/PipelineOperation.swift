@@ -10,8 +10,8 @@ import Foundation
 import Result
 
 public protocol Pipelinable: class {
-    typealias T
-    var output: Result<T, NSError>? { get set }
+    typealias Value
+    var output: Result<Value, NSError>? { get set }
 }
 
 private enum OperationState {

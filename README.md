@@ -31,7 +31,3 @@ A NSOperation subclass that conforms to the Pipelinable protocol, which simply m
 - [ ] Clarify queue priority and QOS in pipeline API
 - [ ] Allow providing a NSOperationQueue when initializing a PipelineQueue
 - [ ] ...
-
-## Questions
-
-Can Pipeline be written to consume any NSOperation that conforms to Pipelinable instead of just PipelineOperations?

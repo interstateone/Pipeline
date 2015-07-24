@@ -41,18 +41,18 @@ public class PipelineQueue {
         internalQueue.cancelAllOperations()
     }
 
-    public func addOperation<O where O: NSOperation, O: Pipelinable>(op: O, _ queue: QueueLevel? = nil) {
+    public func addOperation<Operation where Operation: NSOperation, Operation: Pipelinable>(operation: Operation, _ queue: QueueLevel? = nil) {
         if let queue = queue {
             switch queue {
             case .Main:
-                PipelineQueue(.Main).addOperation(op)
+                PipelineQueue(.Main).addOperation(operation)
             case .QOS(let QOS):
-                op.qualityOfService = QOS
-                internalQueue.addOperation(op)
+                operation.qualityOfService = QOS
+                internalQueue.addOperation(operation)
             }
         }
         else {
-            internalQueue.addOperation(op)
+            internalQueue.addOperation(operation)
         }
     }
 }
@@ -126,35 +126,59 @@ public class Pipeline {
     }
 
     // Operations
-    public func success<T, U>(successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
+    public func success<T, U, Operation where Operation: NSOperation, Operation: Pipelinable, Operation.Value == U>(successHandler handler: T -> Operation) -> Pipeline {
         return self.success(queue, queue.queueLevel, successHandler: handler)
     }
 
-    public func success<T, U>(QOS: PipelineQueue.QueueLevel, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
+    public func success<T, U, Operation where Operation: NSOperation, Operation: Pipelinable, Operation.Value == U>(QOS: PipelineQueue.QueueLevel, successHandler handler: T -> Operation) -> Pipeline {
         return self.success(queue, QOS, successHandler: handler)
     }
 
-    public func success<T, U>(QOS: NSQualityOfService, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
+    public func success<T, U, Operation where Operation: NSOperation, Operation: Pipelinable, Operation.Value == U>(QOS: NSQualityOfService, successHandler handler: T -> Operation) -> Pipeline {
         return self.success(queue, .QOS(QOS), successHandler: handler)
     }
 
-    public func success<T, U>(queue: PipelineQueue, _ QOS: PipelineQueue.QueueLevel, successHandler handler: T -> PipelineOperation<U>) -> Pipeline {
+    public func success<T, U, Operation where Operation: NSOperation, Operation: Pipelinable, Operation.Value == U>(queue: PipelineQueue, _ QOS: PipelineQueue.QueueLevel, successHandler handler: T -> Operation) -> Pipeline {
         if let lastOperation = queue.operations.last as? PipelineOperation<T> {
             var operation: PipelineOperation<U>!
-            operation = PipelineOperation<U> { fulfill, reject in
+            operation = PipelineOperation { fulfill, reject -> Void in
                 if let output = lastOperation.output {
                     switch output {
                     case .Failure(let error):
                         reject(error)
                     case .Success(let output):
                         let innerOp = handler(output)
-                        innerOp.success { output in fulfill(output) }
+
+                        let fulfillCompletion = { () -> Void in
+                            if let output = innerOp.output {
+                                switch output {
+                                case let .Success(value):
+                                    fulfill(value)
+                                case let .Failure(error):
+                                    reject(error)
+                                }
+                            }
+                            reject(NSError(domain: "", code: 123, userInfo: nil))
+                        }
+
+                        // Hijack original completion block if needed
+                        if let originalCompletion = innerOp.completionBlock {
+                            innerOp.completionBlock = {
+                                originalCompletion()
+                                fulfillCompletion()
+                            }
+                        }
+                        else {
+                            innerOp.completionBlock = fulfillCompletion
+                        }
+
                         operation.internalQueue.addOperation(innerOp, QOS)
                     }
                 }
             }
             operation.addDependency(lastOperation)
-            queue.addOperation(operation, QOS)
+            // Don't add the wrapper operation with the supplied QueueLevel because if it's .Main then it and the inner operation are on the same serial queue
+            queue.addOperation(operation)
         }
         
         return self
