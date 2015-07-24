@@ -19,7 +19,7 @@ class PipelineOperationSpec: QuickSpec {
             context("fulfilled") {
                 var operation: PipelineOperation<Int>!
                 beforeEach {
-                    operation = PipelineOperation { fulfill, reject in
+                    operation = PipelineOperation { fulfill, reject, handlers in
                         fulfill(99)
                     }
                     operation.start()
@@ -37,7 +37,7 @@ class PipelineOperationSpec: QuickSpec {
             context("rejected") {
                 var operation: PipelineOperation<Int>!
                 beforeEach {
-                    operation = PipelineOperation { fulfill, reject in
+                    operation = PipelineOperation { fulfill, reject, handlers in
                         reject(placeholderError)
                     }
                     operation.start()
@@ -54,11 +54,17 @@ class PipelineOperationSpec: QuickSpec {
 
             context("cancelled") {
                 var operation: PipelineOperation<Int>!
+                var cancelFlag = false
                 beforeEach {
-                    operation = PipelineOperation { fulfill, reject in
+                    operation = PipelineOperation { fulfill, reject, handlers in
+                        handlers.cancelled = {
+                            cancelFlag = true
+                        }
+
                         fulfill(99)
                     }
                 }
+
                 context("before starting") {
                     beforeEach {
                         operation.cancel()
@@ -66,6 +72,10 @@ class PipelineOperationSpec: QuickSpec {
 
                     it("should be cancelled") {
                         expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("shouldn't call its cancel handler") {
+                        expect(cancelFlag).to(beFalse())
                     }
 
                     it("should be finished") {
@@ -102,7 +112,7 @@ class PipelineOperationSpec: QuickSpec {
             context("fulfilled") {
                 var operation: PipelineOperation<Int>!
                 beforeEach {
-                    operation = PipelineOperation { fulfill, reject in
+                    operation = PipelineOperation { fulfill, reject, handlers in
                         background {
                             onMainAfter(0.5) {
                                 fulfill(99)
@@ -128,7 +138,7 @@ class PipelineOperationSpec: QuickSpec {
             context("rejected") {
                 var operation: PipelineOperation<Int>!
                 beforeEach {
-                    operation = PipelineOperation { fulfill, reject in
+                    operation = PipelineOperation { fulfill, reject, handlers in
                         background {
                             onMainAfter(0.5) {
                                 reject(placeholderError)
@@ -153,12 +163,17 @@ class PipelineOperationSpec: QuickSpec {
 
             context("cancelled") {
                 var operation: PipelineOperation<Int>!
+                var cancelFlag = false
                 beforeEach {
-                    operation = PipelineOperation { fulfill, reject in
+                    operation = PipelineOperation { fulfill, reject, handlers in
                         background {
                             onMainAfter(0.5) {
                                 fulfill(99)
                             }
+                        }
+
+                        handlers.cancelled = {
+                            cancelFlag = true
                         }
                     }
                 }
@@ -170,6 +185,10 @@ class PipelineOperationSpec: QuickSpec {
 
                     it("should be cancelled") {
                         expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("shouldn't call its cancel handler") {
+                        expect(cancelFlag).to(beFalse())
                     }
 
                     it("should be finished") {
@@ -189,6 +208,10 @@ class PipelineOperationSpec: QuickSpec {
 
                     it("should be cancelled") {
                         expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("should call its cancel handler") {
+                        expect(cancelFlag).to(beTrue())
                     }
 
                     it("should be finished") {

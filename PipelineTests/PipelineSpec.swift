@@ -38,7 +38,7 @@ class PipelineSpec: QuickSpec {
     override func spec() {
         let n = 15
         Pipeline(.Background) {
-            PipelineOperation { fulfill, reject in fulfill(fibonacci(n)) }
+            PipelineOperation { fulfill, reject, handlers in fulfill(fibonacci(n)) }
         }.success { (input: Int) in
             "\(n)th Fibonacci number: \(input)"
         }.success(.Main) { (input: String) -> PrintOperation in

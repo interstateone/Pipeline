@@ -62,7 +62,7 @@ public class Pipeline {
 
     public init<U>(handler: () -> U) {
         queue = PipelineQueue(.QOS(.Default))
-        let operation = PipelineOperation<U> { fulfill, reject in
+        let operation = PipelineOperation<U> { fulfill, reject, cancelled in
             fulfill(handler())
         }
         queue.addOperation(operation)
@@ -74,7 +74,7 @@ public class Pipeline {
 
     public init<U>(_ queueLevel: PipelineQueue.QueueLevel = .QOS(.Default), handler: () -> U) {
         queue = PipelineQueue(queueLevel)
-        let operation = PipelineOperation<U> { fulfill, reject in
+        let operation = PipelineOperation<U> { fulfill, reject, cancelled in
             fulfill(handler())
         }
         queue.addOperation(operation)
@@ -110,7 +110,7 @@ public class Pipeline {
 
     public func success<T, U>(queue: PipelineQueue, _ QOS: PipelineQueue.QueueLevel, successHandler handler: T -> U) -> Pipeline {
         if let lastOperation = queue.operations.last as? PipelineOperation<T> {
-            let operation = PipelineOperation<U> { fulfill, reject in
+            let operation = PipelineOperation<U> { fulfill, reject, handlers in
                 if let output = lastOperation.output {
                     switch output {
                     case .Failure(let error): reject(error)
@@ -141,7 +141,7 @@ public class Pipeline {
     public func success<T, U, Operation where Operation: NSOperation, Operation: Pipelinable, Operation.Value == U>(queue: PipelineQueue, _ QOS: PipelineQueue.QueueLevel, successHandler handler: T -> Operation) -> Pipeline {
         if let lastOperation = queue.operations.last as? PipelineOperation<T> {
             var operation: PipelineOperation<U>!
-            operation = PipelineOperation { fulfill, reject -> Void in
+            operation = PipelineOperation<U> { fulfill, reject, handlers in
                 if let output = lastOperation.output {
                     switch output {
                     case .Failure(let error):
