@@ -11,38 +11,112 @@ import Nimble
 import Result
 @testable import Pipeline
 
-func fibonacci(n: Int) -> Int {
-    switch n {
-    case 0: return 0
-    case 1: return 1
-    default: return fibonacci(n - 1) + fibonacci(n - 2)
-    }
-}
-
-class PrintOperation: NSOperation, Pipelinable {
-    typealias Value = Void
-    var output: Result<Value, NSError>?
-    var input: String
-
-    init(input: String) {
-        self.input = input
-    }
-
-    override func main() {
-        print(input)
-        output = .Success()
-    }
-}
-
 class PipelineSpec: QuickSpec {
     override func spec() {
-        let n = 15
-        Pipeline(.Background) {
-            PipelineOperation { fulfill, reject, handlers in fulfill(fibonacci(n)) }
-        }.success { (input: Int) in
-            "\(n)th Fibonacci number: \(input)"
-        }.success(.Main) { (input: String) -> PrintOperation in
-            return PrintOperation(input: input)
-        }.start()
+        context("single asyncronous operation") {
+            var operation: PipelineOperation<Int>!
+            var pipeline: Pipeline!
+            beforeEach {
+                pipeline = Pipeline(.Background) {
+                    PipelineOperation { fulfill, reject, handlers in
+                        background {
+                            onMainAfter(0.5) {
+                                fulfill(42)
+                            }
+                        }
+                    }
+                }
+
+                operation = pipeline.queue.operations.first as! PipelineOperation<Int>
+            }
+
+            it("should be in .Ready state") {
+                expect(pipeline.state).to(equal(Pipeline.State.Ready))
+            }
+            
+            describe("start()") {
+                beforeEach {
+                    pipeline.start()
+                }
+                
+                it("should change state to .Started") {
+                    expect(pipeline.state).to(equal(Pipeline.State.Started))
+                }
+            }
+            
+            describe("cancel()") {
+                context("before starting") {
+                    beforeEach {
+                        pipeline.cancel()
+                    }
+
+                    it("should be cancelled") {
+                        expect(pipeline.state).to(equal(Pipeline.State.Cancelled))
+                    }
+
+                    it("operation should be cancelled") {
+                        expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("operation shouldn't have output") {
+                        expect(operation.output).to(beNil())
+                    }
+
+                    it("shouldn't have any operations") {
+                        expect(pipeline.queue.operations).to(beEmpty())
+                    }
+                }
+
+                context("after starting") {
+                    beforeEach {
+                        pipeline.start()
+                        pipeline.cancel()
+                    }
+                    
+                    it("should be cancelled") {
+                        expect(pipeline.state).to(equal(Pipeline.State.Cancelled))
+                    }
+
+                    it("operation should be cancelled") {
+                        expect(operation.cancelled).to(beTrue())
+                    }
+
+                    it("operation shouldn't have output") {
+                        expect(operation.output).to(beNil())
+                    }
+
+                    it("shouldn't have any operations") {
+                        expect(pipeline.queue.operations).to(beEmpty())
+                    }
+                }
+
+                context("after operation has finished") {
+                    beforeEach {
+                        pipeline.start()
+                        background {
+                            onMainAfter(0.6) {
+                                pipeline.cancel()
+                            }
+                        }
+                    }
+                    
+                    it("should be cancelled") {
+                        expect(pipeline.state).toEventually(equal(Pipeline.State.Cancelled))
+                    }
+
+                    it("operation shouldn't be cancelled") {
+                        expect(operation.cancelled).toEventually(beFalse())
+                    }
+
+                    it("operation should have output") {
+                        expect(operation.output?.value).toEventually(equal(42))
+                    }
+
+                    it("shouldn't have any operations") {
+                        expect(pipeline.queue.operations).toEventually(beEmpty())
+                    }
+                }
+            }
+        }
     }
 }

@@ -3,14 +3,6 @@ import Nimble
 import Result
 @testable import Pipeline
 
-let background = { then in
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0), then)
-}
-
-let onMainAfter: (Double, () -> ()) -> () = { seconds, then in
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(seconds) * Int64(NSEC_PER_SEC)), dispatch_get_main_queue(), then)
-}
-
 let placeholderError = NSError(domain: "ca.brandonevans.Pipeline", code: 123, userInfo: nil)
 
 class PipelineOperationSpec: QuickSpec {

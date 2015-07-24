@@ -15,6 +15,7 @@ public class PipelineQueue {
     }
 
     private let internalQueue: NSOperationQueue
+    private var allOperations: [NSOperation] = []
 
     public let queueLevel: QueueLevel
     public var suspended = true {
@@ -23,7 +24,7 @@ public class PipelineQueue {
         }
     }
     public var operations: [NSOperation] {
-        return internalQueue.operations
+        return allOperations.filter { !$0.finished }
     }
 
     public init(_ queueLevel: QueueLevel = .QOS(.Default)) {
@@ -38,10 +39,15 @@ public class PipelineQueue {
     }
 
     public func cancelAllOperations() {
-        internalQueue.cancelAllOperations()
+        for operation in allOperations {
+            operation.cancel()
+        }
+        allOperations = []
     }
 
     public func addOperation<Operation where Operation: NSOperation, Operation: Pipelinable>(operation: Operation, _ queue: QueueLevel? = nil) {
+        allOperations.append(operation)
+
         if let queue = queue {
             switch queue {
             case .Main:
@@ -58,7 +64,20 @@ public class PipelineQueue {
 }
 
 public class Pipeline {
-    private let queue: PipelineQueue
+    internal enum State {
+        case Ready
+        case Started
+        case Cancelled
+    }
+    internal var state: State = .Ready {
+        willSet {
+            if state == .Cancelled {
+                return
+            }
+        }
+    }
+
+    internal let queue: PipelineQueue
 
     public init<U>(handler: () -> U) {
         queue = PipelineQueue(.QOS(.Default))
@@ -91,7 +110,16 @@ public class Pipeline {
     }
 
     public func start() {
+        if state != .Ready {
+            return
+        }
+        state = .Started
         queue.suspended = false
+    }
+
+    public func cancel() {
+        state = .Cancelled
+        queue.cancelAllOperations()
     }
 
     // Values
