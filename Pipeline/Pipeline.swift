@@ -23,7 +23,7 @@ public class PipelineQueue {
         }
     }
     public var operations: [NSOperation] {
-        return q.operations
+        return internalQueue.operations
     }
 
     public init(_ queueLevel: QueueLevel = .QOS(.Default)) {
@@ -38,7 +38,7 @@ public class PipelineQueue {
     }
 
     public func cancelAllOperations() {
-        q.cancelAllOperations()
+        internalQueue.cancelAllOperations()
     }
 
     public func addOperation<O where O: NSOperation, O: Pipelinable>(op: O, _ queue: QueueLevel? = nil) {
