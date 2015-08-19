@@ -129,7 +129,7 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
     }
 
     public override final func cancel() {
-        if state == .Cancelled {
+        if state == .Finished {
             return
         }
         state = .Cancelled

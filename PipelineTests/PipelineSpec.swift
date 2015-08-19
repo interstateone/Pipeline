@@ -15,7 +15,7 @@ class PipelineSpec: QuickSpec {
     override func spec() {
         context("single asyncronous operation") {
             var operation: PipelineOperation<Int>!
-            var pipeline: Pipeline!
+            var pipeline: Pipeline<Int>!
             beforeEach {
                 pipeline = Pipeline(.Background) {
                     PipelineOperation { fulfill, reject, handlers in
@@ -31,7 +31,7 @@ class PipelineSpec: QuickSpec {
             }
 
             it("should be in .Ready state") {
-                expect(pipeline.state).to(equal(Pipeline.State.Ready))
+                expect(pipeline.state).to(equal(PipelineState.Ready))
             }
             
             describe("start()") {
@@ -40,7 +40,7 @@ class PipelineSpec: QuickSpec {
                 }
                 
                 it("should change state to .Started") {
-                    expect(pipeline.state).to(equal(Pipeline.State.Started))
+                    expect(pipeline.state).to(equal(PipelineState.Started))
                 }
             }
             
@@ -51,7 +51,7 @@ class PipelineSpec: QuickSpec {
                     }
 
                     it("should be cancelled") {
-                        expect(pipeline.state).to(equal(Pipeline.State.Cancelled))
+                        expect(pipeline.state).to(equal(PipelineState.Cancelled))
                     }
 
                     it("operation should be cancelled") {
@@ -74,7 +74,7 @@ class PipelineSpec: QuickSpec {
                     }
                     
                     it("should be cancelled") {
-                        expect(pipeline.state).to(equal(Pipeline.State.Cancelled))
+                        expect(pipeline.state).to(equal(PipelineState.Cancelled))
                     }
 
                     it("operation should be cancelled") {
@@ -94,18 +94,18 @@ class PipelineSpec: QuickSpec {
                     beforeEach {
                         pipeline.start()
                         background {
-                            onMainAfter(0.6) {
+                            onMainAfter(1.0) {
                                 pipeline.cancel()
                             }
                         }
                     }
                     
                     it("should be cancelled") {
-                        expect(pipeline.state).toEventually(equal(Pipeline.State.Cancelled))
+                        expect(pipeline.state).toEventually(equal(PipelineState.Cancelled), timeout: 2.0)
                     }
 
                     it("operation shouldn't be cancelled") {
-                        expect(operation.cancelled).toEventually(beFalse())
+                        expect(operation.cancelled).toEventually(beFalse(), timeout: 2.0)
                     }
 
                     it("operation should have output") {
