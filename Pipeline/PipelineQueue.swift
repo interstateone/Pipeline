@@ -14,10 +14,9 @@ public class PipelineQueue {
         case QOS(NSQualityOfService)
     }
 
-    private let internalQueue: NSOperationQueue
+    internal let internalQueue: NSOperationQueue
     private var allOperations: [NSOperation] = []
 
-    internal let queueLevel: QueueLevel
     internal var suspended = true {
         didSet {
             internalQueue.suspended = suspended
@@ -27,19 +26,12 @@ public class PipelineQueue {
         return allOperations.filter { !$0.finished }
     }
 
-    internal init(_ queueLevel: QueueLevel = .QOS(.Default)) {
-        self.queueLevel = queueLevel
-        switch queueLevel {
-        case .Main:
-            internalQueue = NSOperationQueue.mainQueue()
-        case .QOS(let QOS):
-            internalQueue = NSOperationQueue()
-            internalQueue.qualityOfService = QOS
-        }
+    internal init(_ QOS: NSQualityOfService = .Default) {
+        internalQueue = NSOperationQueue()
+        internalQueue.qualityOfService = QOS
     }
 
     internal init(_ queue: NSOperationQueue) {
-        queueLevel = .QOS(queue.qualityOfService)
         internalQueue = queue
     }
 
@@ -50,13 +42,13 @@ public class PipelineQueue {
         allOperations = []
     }
 
-    internal func addOperation<Operation where Operation: NSOperation, Operation: Pipelinable>(operation: Operation, _ queue: QueueLevel? = nil) {
+    internal func addOperation<Operation where Operation: NSOperation, Operation: Pipelinable>(operation: Operation, _ queueLevel: QueueLevel? = nil) {
         allOperations.append(operation)
 
-        if let queue = queue {
-            switch queue {
+        if let queueLevel = queueLevel {
+            switch queueLevel {
             case .Main:
-                PipelineQueue(.Main).addOperation(operation)
+                NSOperationQueue.mainQueue().addOperation(operation)
             case .QOS(let QOS):
                 operation.qualityOfService = QOS
                 internalQueue.addOperation(operation)

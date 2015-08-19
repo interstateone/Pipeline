@@ -33,7 +33,7 @@ public class Pipeline<T> {
     :param: handler Closure that returns the Pipeline's first value
     */
     public init(handler: () -> T) {
-        queue = PipelineQueue(.QOS(.Default))
+        queue = PipelineQueue(.Default)
         let operation = PipelineOperation<T> { fulfill, reject, cancelled in
             fulfill(handler())
         }
@@ -57,7 +57,7 @@ public class Pipeline<T> {
     :param: handler    Closure that returns the Pipeline's first value
     */
     public init(defaultQueueLevel: NSQualityOfService = .Default, _ queueLevel: PipelineQueue.QueueLevel = .QOS(.Default), handler: () -> T) {
-        queue = PipelineQueue(.QOS(defaultQueueLevel))
+        queue = PipelineQueue(defaultQueueLevel)
         let operation = PipelineOperation { fulfill, reject, cancelled in
             fulfill(handler())
         }
@@ -95,7 +95,7 @@ public class Pipeline<T> {
     :param: operationHandler Closure that returns a PipelineOperation that is fulfilled with the Pipeline's first value
     */
     public init(defaultQueueLevel: NSQualityOfService = .Default, _ queueLevel: PipelineQueue.QueueLevel = .QOS(.Default), operationHandler: () -> PipelineOperation<T>) {
-        queue = PipelineQueue(.QOS(defaultQueueLevel))
+        queue = PipelineQueue(defaultQueueLevel)
         let operation = operationHandler()
         queue.addOperation(operation, queueLevel)
     }
@@ -112,7 +112,7 @@ public class Pipeline<T> {
         queue.addOperation(operation)
     }
 
-    private init(queue: PipelineQueue, operation: PipelineOperation<T>, QOS: PipelineQueue.QueueLevel = .QOS(.Default)) {
+    private init(queue: PipelineQueue, operation: PipelineOperation<T>, QOS: PipelineQueue.QueueLevel? = .QOS(.Default)) {
         self.queue = queue
         queue.addOperation(operation, QOS)
     }
@@ -155,7 +155,7 @@ public class Pipeline<T> {
             }
         }
         operation.addDependency(lastOperation)
-        return Pipeline<U>(queue: self.queue, operation: operation, QOS: QOS ?? queue.queueLevel)
+        return Pipeline<U>(queue: self.queue, operation: operation, QOS: QOS)
     }
 
     // MARK: Success with operations
@@ -198,7 +198,7 @@ public class Pipeline<T> {
                         innerOp.completionBlock = fulfillCompletion
                     }
                     
-                    operation.internalQueue.addOperation(innerOp, QOS ?? self.queue.queueLevel)
+                    operation.internalQueue.addOperation(innerOp, QOS)
                 }
             }
         }
