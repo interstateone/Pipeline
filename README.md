@@ -5,12 +5,15 @@
 ## A Trivial Example
 
 ```swift
+// class PrintOperation: NSOperation, Pipelinable
+// func fibonacci(n: Int) -> Int
+
 let n = 15
 Pipeline(.Background) {
-    PipelineOperation { fulfill, reject in fulfill(fibonacci(n)) }
-}.success { (input: Int) in
+    PipelineOperation { fulfill, _, _ in fulfill(fibonacci(n)) }
+}.success { input in
     "\(n)th Fibonacci number: \(input)"
-}.success(.Main) { (input: String) -> PrintOperation in
+}.success(.Main) { input in
     return PrintOperation(input: input)
 }.start()
 ```
