@@ -21,13 +21,19 @@ private enum OperationState {
     case Cancelled
 }
 
+public class Handlers {
+    var cancelled: () -> () = {}
+}
+
 public class PipelineOperation<T>: NSOperation, Pipelinable {
     public typealias Fulfill = T -> Void
     public typealias Reject = NSError -> Void
 
     public var output: Result<T, NSError>?
 
-    private var task: ((Fulfill, Reject) -> Void)?
+    private var task: ((Fulfill, Reject, Handlers) -> Void)?
+    private var handlers: Handlers = Handlers()
+
     public let internalQueue: PipelineQueue = {
         let q = PipelineQueue()
         q.suspended = true
@@ -98,7 +104,7 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
 
     // MARK: Initializers
 
-    public init(task: (Fulfill, Reject) -> Void) {
+    public init(task: (Fulfill, Reject, Handlers) -> Void) {
         self.task = task
         super.init()
     }
@@ -118,13 +124,17 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
     public override final func main() {
         internalQueue.suspended = false
         if let task = self.task {
-            task(fulfill, reject)
+            task(fulfill, reject, handlers)
         }
     }
 
     public override final func cancel() {
-        internalQueue.cancelAllOperations()
+        if state == .Finished {
+            return
+        }
         state = .Cancelled
+        internalQueue.cancelAllOperations()
+        handlers.cancelled()
         super.cancel()
     }
 
@@ -140,7 +150,7 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
 
     // map
     public func success<U>(successHandler handler: T -> U) -> PipelineOperation<U> {
-        let next = PipelineOperation<U> { fulfill, reject in
+        let next = PipelineOperation<U> { fulfill, reject, handlers in
             if let output = self.output {
                 switch output {
                 case .Failure(let error): reject(error)
@@ -156,7 +166,7 @@ public class PipelineOperation<T>: NSOperation, Pipelinable {
     // flatMap
     public func success<U>(successHandler handler: T -> PipelineOperation<U>) -> PipelineOperation<U> {
         var next: PipelineOperation<U>!
-        next = PipelineOperation<U> { fulfill, reject in
+        next = PipelineOperation<U> { fulfill, reject, cancelled in
             if let output = self.output {
                 switch output {
                 case .Failure(let error):

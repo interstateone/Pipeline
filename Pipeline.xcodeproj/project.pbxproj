@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA27191C1B61E1F400BBBBEA /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA27191B1B61E1F400BBBBEA /* Utilities.swift */; };
+		CA27191E1B61F57800BBBBEA /* PipelineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA27191D1B61F57800BBBBEA /* PipelineQueue.swift */; };
 		CA4CD4881B586A84008970FF /* Pipeline.h in Headers */ = {isa = PBXBuildFile; fileRef = CA4CD4871B586A84008970FF /* Pipeline.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		CA4CD48F1B586A84008970FF /* Pipeline.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA4CD4841B586A84008970FF /* Pipeline.framework */; };
 		CA4CD4941B586A84008970FF /* PipelineSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4CD4931B586A84008970FF /* PipelineSpec.swift */; };
@@ -49,6 +51,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA27191B1B61E1F400BBBBEA /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
+		CA27191D1B61F57800BBBBEA /* PipelineQueue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PipelineQueue.swift; sourceTree = "<group>"; };
 		CA4CD4841B586A84008970FF /* Pipeline.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pipeline.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA4CD4871B586A84008970FF /* Pipeline.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Pipeline.h; sourceTree = "<group>"; };
 		CA4CD4891B586A84008970FF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -109,6 +113,7 @@
 			isa = PBXGroup;
 			children = (
 				CA4CD49E1B586AD9008970FF /* Pipeline.swift */,
+				CA27191D1B61F57800BBBBEA /* PipelineQueue.swift */,
 				CA4CD4AE1B5873D8008970FF /* PipelineOperation.swift */,
 				CA4CD4871B586A84008970FF /* Pipeline.h */,
 				CA4CD4891B586A84008970FF /* Info.plist */,
@@ -121,6 +126,7 @@
 			children = (
 				CA4CD4931B586A84008970FF /* PipelineSpec.swift */,
 				CA4CD4B01B587CD9008970FF /* PipelineOperationSpec.swift */,
+				CA27191B1B61E1F400BBBBEA /* Utilities.swift */,
 				CA4CD4951B586A84008970FF /* Info.plist */,
 			);
 			path = PipelineTests;
@@ -246,6 +252,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CA4CD49F1B586AD9008970FF /* Pipeline.swift in Sources */,
+				CA27191E1B61F57800BBBBEA /* PipelineQueue.swift in Sources */,
 				CA4CD4AF1B5873D8008970FF /* PipelineOperation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -254,6 +261,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA27191C1B61E1F400BBBBEA /* Utilities.swift in Sources */,
 				CA4CD4B11B587CD9008970FF /* PipelineOperationSpec.swift in Sources */,
 				CA4CD4941B586A84008970FF /* PipelineSpec.swift in Sources */,
 			);
