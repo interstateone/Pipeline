@@ -67,6 +67,20 @@ public class Pipeline<T> {
     /**
     Creates a new Pipeline
 
+    :param: queue   The NSOperationQueue that the handler will be enqueued on
+    :param: handler Closure that returns the Pipeline's first value
+    */
+    public init(_ queue: NSOperationQueue, handler: () -> T) {
+        self.queue = PipelineQueue(queue)
+        let operation = PipelineOperation { fulfill, reject, cancelled in
+            fulfill(handler())
+        }
+        queue.addOperation(operation)
+    }
+
+    /**
+    Creates a new Pipeline
+
     :param: QOS              The quality of service that the operation will be enqueued with
     :param: operationHandler Closure that returns a PipelineOperation that is fulfilled with the Pipeline's first value
     */
@@ -82,6 +96,18 @@ public class Pipeline<T> {
     */
     public init(_ queueLevel: PipelineQueue.QueueLevel = .QOS(.Default), operationHandler: () -> PipelineOperation<T>) {
         queue = PipelineQueue(queueLevel)
+        let operation = operationHandler()
+        queue.addOperation(operation)
+    }
+
+    /**
+    Creates a new Pipeline
+
+    :param: queue            The NSOperationQueue that the operation will be enqueued on.
+    :param: operationHandler Closure that returns a PipelineOperation that is fulfilled with the Pipeline's first value
+    */
+    public init(_ queue: NSOperationQueue, operationHandler: () -> PipelineOperation<T>) {
+        self.queue = PipelineQueue(queue)
         let operation = operationHandler()
         queue.addOperation(operation)
     }

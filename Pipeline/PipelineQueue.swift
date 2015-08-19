@@ -38,6 +38,11 @@ public class PipelineQueue {
         }
     }
 
+    internal init(_ queue: NSOperationQueue) {
+        queueLevel = .QOS(queue.qualityOfService)
+        internalQueue = queue
+    }
+
     internal func cancelAllOperations() {
         for operation in allOperations {
             operation.cancel()
