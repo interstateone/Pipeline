@@ -1,5 +1,7 @@
 # Pipeline
 
+[![Build Status](https://travis-ci.org/interstateone/Pipeline.svg)](https://travis-ci.org/interstateone/Pipeline)
+
 **This is a work-in-progress and might not ever be any more than an experiment.**
 
 What if NSOperations were as easy to sequence as Promise/task APIs? This is an attempt at that.
